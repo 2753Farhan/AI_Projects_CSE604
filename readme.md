@@ -44,7 +44,7 @@ Provide a brief description of the second project. Highlight the major algorithm
 A description of the third project, its purpose, and the AI techniques utilized.
 
 ### Image
-(![Screenshot 2024-10-21 232505](https://github.com/user-attachments/assets/860abd0a-ba10-4bff-836c-dc7ea95a6dc0))
+![Screenshot 2024-10-21 232505](https://github.com/user-attachments/assets/860abd0a-ba10-4bff-836c-dc7ea95a6dc0)
 
 ### Demo
 [Watch the demo video](link-to-demo)
