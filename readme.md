@@ -20,7 +20,8 @@ In this course, we focus on various AI techniques and apply them to real-world p
 Provide a brief description of the first project. Include the key objectives, AI concepts involved, and any challenges faced during development.
 
 ### Image
-![Project 1 Screenshot](link-to-image)
+![Screenshot 2024-10-21 232447](https://github.com/user-attachments/assets/58a746a8-78fb-4d55-ab82-533395ebac12)
+
 
 ### Demo
 [Watch the demo video](link-to-demo)
