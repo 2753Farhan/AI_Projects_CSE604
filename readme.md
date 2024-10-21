@@ -32,7 +32,8 @@ Provide a brief description of the first project. Include the key objectives, AI
 Provide a brief description of the second project. Highlight the major algorithms or AI techniques implemented.
 
 ### Image
-![]()
+![Screenshot 2024-10-21 232456](https://github.com/user-attachments/assets/6bb442ef-f2ab-4503-86ee-afb2a16f769b)
+
 
 ### Demo
 [Watch the demo video](link-to-demo)
