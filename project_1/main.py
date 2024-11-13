@@ -7,7 +7,7 @@ import random
 pygame.init()
 
 # Game settings
-WIDTH, HEIGHT = 800, 800  # Increased size for better UI
+WIDTH, HEIGHT = 800, 800
 BOARD_SIZE = 600
 ROWS, COLS = 10, 10
 CELL_SIZE = BOARD_SIZE // COLS
@@ -22,29 +22,35 @@ GRAY = (130, 130, 130)
 RED = (220, 50, 50)
 GOLD = (255, 215, 0)
 PURPLE = (147, 112, 219)
-BG_COLOR = (25, 25, 50)  # Dark blue background
-BOARD_COLOR = (40, 40, 70)  # Slightly lighter than background
-HIGHLIGHT_COLOR = (100, 100, 255, 128)  # Semi-transparent highlight
+BG_COLOR = (25, 25, 50)
+BOARD_COLOR = (64, 95, 137)
+HIGHLIGHT_COLOR = (100, 100, 255, 128)
 STAR_COLOR = (255, 255, 200)
 
 # Initialize screen
 WIN = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Cosmic Gomoku")
 
+# Game states
+MENU = "menu"
+PLAYING = "playing"
+AI_THINKING = "ai_thinking"
+GAME_OVER = "game_over"
+
 # Board setup
 board = [[None for _ in range(COLS)] for _ in range(ROWS)]
 current_player = "black"
-game_state = "playing"  # "playing", "game_over", "ai_thinking"
+game_state = MENU
+game_mode = None  # "ai" or "human"
 
 # AI settings
-MAX_DEPTH = 3  # Maximum depth for minimax search
+MAX_DEPTH = 3
 
 # Enhanced Fonts
 FONT_LARGE = pygame.font.SysFont("arial", 48, bold=True)
 FONT_MEDIUM = pygame.font.SysFont("arial", 36)
 FONT_SMALL = pygame.font.SysFont("arial", 24)
 
-# Button Class
 class Button:
     def __init__(self, x, y, width, height, text, color):
         self.rect = pygame.Rect(x, y, width, height)
@@ -70,7 +76,6 @@ class Button:
                 return True
         return False
 
-# Star background effect
 class Star:
     def __init__(self):
         self.x = random.randint(0, WIDTH)
@@ -90,10 +95,13 @@ class Star:
 stars = [Star() for _ in range(100)]
 
 # Buttons
+ai_mode_button = Button(WIDTH//2 - 200, HEIGHT//2 - 50, 400, 50, "Play vs AI", PURPLE)
+human_mode_button = Button(WIDTH//2 - 200, HEIGHT//2 + 50, 400, 50, "Play vs Human", BLUE)
 restart_button = Button(WIDTH//2 - 180, HEIGHT//2 + 50, 160, 50, "Play Again", PURPLE)
 quit_button = Button(WIDTH//2 + 20, HEIGHT//2 + 50, 160, 50, "Quit", RED)
 
-# Game State Class
+# [Previous AI-related classes and functions remain the same: GameState, evaluate_position, 
+# get_sequence, is_sequence_open, minimax, get_ai_move]
 class GameState:
     def __init__(self, board):
         self.board = [row[:] for row in board]
@@ -120,7 +128,6 @@ def evaluate_position(state, player):
     score = 0
     directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
     
-    # Weights for different patterns
     weights = {
         5: 100000,    # Win
         4: {
@@ -129,7 +136,8 @@ def evaluate_position(state, player):
         },
         3: {
             'open': 5000,     # Open three (major threat)
-            'closed': 1000    # Closed three
+            'closed': 1000,   # Closed three
+            'blocking': 7500  # Blocking opponent's 3 in a row
         },
         2: {
             'open': 500,      # Open two
@@ -141,12 +149,12 @@ def evaluate_position(state, player):
         for col in range(COLS):
             if state.board[row][col] is None:
                 continue
-                
+            
             for dr, dc in directions:
-                sequence = get_sequence(state.board, row, col, dr, dc)
+                sequence, gap_position, is_double_open = get_sequence(state.board, row, col, dr, dc)
                 if not sequence:
                     continue
-                    
+                
                 length = len(sequence)
                 current_player = sequence[0]
                 
@@ -156,29 +164,40 @@ def evaluate_position(state, player):
                         state.board[prev_r][prev_c] == current_player):
                         continue
                 
-                openness = is_sequence_open(state.board, row, col, dr, dc)
-                is_open = openness > 0
-                is_double_open = openness == 2
+                pattern_type = 'open' if is_double_open else 'closed'
                 
+                # Calculate pattern score
                 if length >= 5:
                     pattern_score = weights[5]
-                elif length >= 2:
-                    pattern_type = 'open' if is_open else 'closed'
-                    pattern_score = weights[length][pattern_type]
+                elif length >= 4:
+                    pattern_score = weights[4][pattern_type]
+                elif length >= 3:
+                    # Modified logic for three-in-a-row patterns
                     if is_double_open:
-                        pattern_score *= 1.5
+                        if current_player != player:
+                            # If it's opponent's three in a row and double open,
+                            # consider it as blocking priority
+                            pattern_score = weights[3]['blocking']
+                        else:
+                            pattern_score = weights[3]['open']
+                    else:
+                        pattern_score = weights[3][pattern_type]
+                elif length >= 2:
+                    pattern_score = weights[2][pattern_type]
                 else:
                     continue
                 
+                # Adjust scores for opponent's threats
                 if current_player != player:
                     if length >= 4:
                         pattern_score *= 1.2
-                    if is_open and length >= 3:
+                    if is_double_open and length >= 3:
                         pattern_score *= 1.1
                 
-                multiplier = 1 if current_player == player else -1.2
+                multiplier = 1 if current_player == player else -1
                 score += multiplier * pattern_score
                 
+                # Add position bonus
                 center_row, center_col = ROWS // 2, COLS // 2
                 distance_to_center = abs(row - center_row) + abs(col - center_col)
                 position_bonus = 50 * (1 / (distance_to_center + 1))
@@ -189,30 +208,41 @@ def evaluate_position(state, player):
 def get_sequence(board, row, col, dr, dc):
     sequence = []
     player = board[row][col]
-    r, c = row, col
     
+    # Check backwards first to find start of sequence
+    r, c = row - dr, col - dc
+    backwards_empty = 0
+    while 0 <= r < ROWS and 0 <= c < COLS and board[r][c] is None:
+        backwards_empty += 1
+        r, c = r - dr, c - dc
+    
+    # Now check forwards
+    r, c = row, col
     gap_found = False
     gap_position = None
+    forwards_empty = 0
     
     for i in range(5):
         if not (0 <= r < ROWS and 0 <= c < COLS):
             break
-            
+        
         current = board[r][c]
         if current == player:
             sequence.append(current)
         elif current is None and not gap_found:
             gap_found = True
             gap_position = len(sequence)
+            forwards_empty += 1
+        elif current is None:
+            forwards_empty += 1
+            break
         else:
             break
-            
+        
         r, c = r + dr, c + dc
     
-    if gap_found and len(sequence) >= 2:
-        return sequence
-    
-    return sequence if len(sequence) >= 2 else []
+    is_double_open = (backwards_empty > 0 and forwards_empty > 0)
+    return sequence, gap_position, is_double_open
 
 def is_sequence_open(board, row, col, dr, dc):
     player = board[row][col]
@@ -290,15 +320,54 @@ def draw_stars():
         star.update()
         star.draw()
 
+def draw_menu():
+    WIN.fill(BG_COLOR)
+    draw_stars()
+    
+    title = FONT_LARGE.render("Cosmic Gomoku", True, GOLD)
+    title_rect = title.get_rect(center=(WIDTH//2, HEIGHT//3))
+    WIN.blit(title, title_rect)
+    
+    ai_mode_button.draw()
+    human_mode_button.draw()
+    
+    pygame.display.update()
+    
+def get_board_position(pos):
+    x, y = pos
+    row = (y - BOARD_OFFSET_Y) // CELL_SIZE
+    col = (x - BOARD_OFFSET_X) // CELL_SIZE
+    if 0 <= row < ROWS and 0 <= col < COLS:
+        return row, col
+    return None
+
+def handle_menu():
+    global game_state, game_mode
+    
+    for event in pygame.event.get():
+        if event.type == pygame.QUIT:
+            pygame.quit()
+            sys.exit()
+        
+        if ai_mode_button.handle_event(event):
+            game_mode = "ai"
+            game_state = PLAYING
+            reset_game()
+            return
+            
+        if human_mode_button.handle_event(event):
+            game_mode = "human"
+            game_state = PLAYING
+            reset_game()
+            return
+
 def draw_grid():
     WIN.fill(BG_COLOR)
     draw_stars()
     
-    # Draw board background
     board_rect = pygame.Rect(BOARD_OFFSET_X, BOARD_OFFSET_Y, BOARD_SIZE, BOARD_SIZE)
     pygame.draw.rect(WIN, BOARD_COLOR, board_rect)
     
-    # Draw grid lines
     for i in range(ROWS + 1):
         start_x = BOARD_OFFSET_X
         start_y = BOARD_OFFSET_Y + i * CELL_SIZE
@@ -312,14 +381,12 @@ def draw_grid():
         end_y = BOARD_OFFSET_Y + BOARD_SIZE
         pygame.draw.line(WIN, GRAY, (start_x, start_y), (end_x, end_y), 1)
     
-    # Draw stones
     for row in range(ROWS):
         for col in range(COLS):
             if board[row][col] is not None:
                 x = BOARD_OFFSET_X + col * CELL_SIZE + CELL_SIZE // 2
                 y = BOARD_OFFSET_Y + row * CELL_SIZE + CELL_SIZE // 2
                 color = BLACK if board[row][col] == "black" else WHITE
-                # Draw stone with gradient effect
                 for i in range(5):
                     radius = CELL_SIZE // 2 - 5 - i
                     alpha = 255 - i * 30
@@ -327,16 +394,20 @@ def draw_grid():
                     pygame.draw.circle(surface, (*color, alpha), (radius, radius), radius)
                     WIN.blit(surface, (x - radius, y - radius))
     
-    # Draw turn indicator
-    turn_text = f"{'Your' if current_player == 'black' else 'AI'}'s Turn"
-    if game_state == "ai_thinking":
-        turn_text = "AI is thinking..."
+    # Update turn indicator based on game mode
+    if game_mode == "ai":
+        turn_text = f"{'Your' if current_player == 'black' else 'AI'}'s Turn"
+        if game_state == AI_THINKING:
+            turn_text = "AI is thinking..."
+    else:
+        turn_text = f"{'Black' if current_player == 'black' else 'White'}'s Turn"
+    
     text_surface = FONT_MEDIUM.render(turn_text, True, GOLD)
     WIN.blit(text_surface, (20, 20))
     
     pygame.display.update()
-# BLUE
-
+    
+    
 def draw_hover(row, col):
     if board[row][col] is None and 0 <= row < ROWS and 0 <= col < COLS:
         x = BOARD_OFFSET_X + col * CELL_SIZE + CELL_SIZE // 2
@@ -370,6 +441,7 @@ def check_win(row, col, player):
         if count >= 5:
             return start, end
     return
+
 def draw_winning_line(win_result):
     start, end = win_result
     start_pos = (BOARD_OFFSET_X + start[1] * CELL_SIZE + CELL_SIZE // 2, 
@@ -379,12 +451,18 @@ def draw_winning_line(win_result):
     pygame.draw.line(WIN, RED, start_pos, end_pos, 8)
     pygame.display.update()
 
+
+
 def display_winner_message(player):
     surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
     surface.fill((0, 0, 0, 180))
     WIN.blit(surface, (0, 0))
     
-    message = f"{'You won!' if player == 'black' else 'AI won!'}"
+    if game_mode == "ai":
+        message = f"{'You won!' if player == 'black' else 'AI won!'}"
+    else:
+        message = f"{'Black' if player == 'black' else 'White'} won!"
+    
     text = FONT_LARGE.render(message, True, GOLD)
     WIN.blit(text, (WIDTH//2 - text.get_width()//2, HEIGHT//2 - text.get_height()))
     
@@ -392,32 +470,12 @@ def display_winner_message(player):
     quit_button.draw()
     pygame.display.update()
 
-def handle_game_over():
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                sys.exit()
-            
-            if restart_button.handle_event(event):
-                return "restart"
-            if quit_button.handle_event(event):
-                return "quit"
-
 def reset_game():
     global board, current_player, game_state
     board = [[None for _ in range(COLS)] for _ in range(ROWS)]
     current_player = "black"
-    game_state = "playing"
+    game_state = PLAYING
     draw_grid()
-
-def get_board_position(pos):
-    x, y = pos
-    row = (y - BOARD_OFFSET_Y) // CELL_SIZE
-    col = (x - BOARD_OFFSET_X) // CELL_SIZE
-    if 0 <= row < ROWS and 0 <= col < COLS:
-        return row, col
-    return None
 
 def place_stone(row, col):
     global current_player, game_state
@@ -431,51 +489,64 @@ def place_stone(row, col):
             draw_winning_line(win_result)
             pygame.time.delay(500)
             display_winner_message(current_player)
-            result = handle_game_over()
-            if result == "restart":
-                reset_game()
-            else:
-                pygame.quit()
-                sys.exit()
+            game_state = GAME_OVER
         else:
             current_player = "white" if current_player == "black" else "black"
-            if current_player == "white":
-                game_state = "ai_thinking"
+            if game_mode == "ai" and current_player == "white":
+                game_state = AI_THINKING
                 draw_grid()
-                pygame.time.delay(500)  # Add slight delay for AI "thinking"
+                pygame.time.delay(500)
                 row, col = get_ai_move()
-                game_state = "playing"
+                game_state = PLAYING
                 place_stone(row, col)
 
 def main():
-    global current_player, game_state
+    global game_state
     
-    run = True
     clock = pygame.time.Clock()
-    draw_grid()
     
-    while run:
-        clock.tick(60)  # Limit frame rate to 60 FPS
+    while True:
+        clock.tick(60)
         
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                run = False
-                pygame.quit()
-                sys.exit()
+        if game_state == MENU:
+            draw_menu()
+            handle_menu()
             
-            if game_state == "playing":
-                if event.type == pygame.MOUSEBUTTONDOWN and current_player == "black":
-                    pos = get_board_position(event.pos)
-                    if pos:
-                        row, col = pos
-                        place_stone(row, col)
+        elif game_state == PLAYING or game_state == AI_THINKING:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
                 
-                elif event.type == pygame.MOUSEMOTION and current_player == "black":
-                    pos = get_board_position(event.pos)
-                    draw_grid()
-                    if pos:
-                        row, col = pos
-                        draw_hover(row, col)
+                if game_state == PLAYING:
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        if (game_mode == "human" or 
+                            (game_mode == "ai" and current_player == "black")):
+                            pos = get_board_position(event.pos)
+                            if pos:
+                                row, col = pos
+                                place_stone(row, col)
+                    
+                    elif event.type == pygame.MOUSEMOTION:
+                        if (game_mode == "human" or 
+                            (game_mode == "ai" and current_player == "black")):
+                            pos = get_board_position(event.pos)
+                            draw_grid()
+                            if pos:
+                                row, col = pos
+                                draw_hover(row, col)
+                                
+        elif game_state == GAME_OVER:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                
+                if restart_button.handle_event(event):
+                    game_state = MENU
+                if quit_button.handle_event(event):
+                    pygame.quit()
+                    sys.exit()
 
 if __name__ == "__main__":
     main()
