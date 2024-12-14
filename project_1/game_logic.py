@@ -2,7 +2,6 @@
 from game_state import GameState
 from constants import *
 import random
-
 def evaluate_position(state, player):
     score = 0
     directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
@@ -123,7 +122,6 @@ def get_sequence(board, row, col, dr, dc):
     is_double_open = (backwards_empty > 0 and forwards_empty > 0)
     return sequence, gap_position, is_double_open
 
-
 def is_sequence_open(board, row, col, dr, dc):
     player = board[row][col]
     sequence_length = len(get_sequence(board, row, col, dr, dc))
@@ -190,18 +188,11 @@ def minimax(state, depth, alpha, beta, maximizing_player, player):
                 
         return min_eval, best_move
 
-def get_ai_move(board, current_player):
-    state = GameState(board)
-    _, move = minimax(state, MAX_DEPTH, float('-inf'), float('inf'), True, current_player)
-    return move
-
-def check_win(board, row, col, player):
+def check_win(row, col, player,board):
     directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
     for dr, dc in directions:
         count = 1
         start, end = (row, col), (row, col)
-        
-        # Check forward direction
         for i in range(1, 5):
             r, c = row + dr * i, col + dc * i
             if 0 <= r < ROWS and 0 <= c < COLS and board[r][c] == player:
@@ -209,8 +200,6 @@ def check_win(board, row, col, player):
                 end = (r, c)
             else:
                 break
-                
-        # Check backward direction
         for i in range(1, 5):
             r, c = row - dr * i, col - dc * i
             if 0 <= r < ROWS and 0 <= c < COLS and board[r][c] == player:
@@ -218,7 +207,11 @@ def check_win(board, row, col, player):
                 start = (r, c)
             else:
                 break
-                
         if count >= 5:
             return start, end
-    return None
+    return
+
+def get_ai_move(board,current_player):
+    state = GameState(board)
+    _, move = minimax(state, MAX_DEPTH, float('-inf'), float('inf'), True, current_player)
+    return move

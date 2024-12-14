@@ -11,18 +11,18 @@ class Board:
         self.current_player = "black"
         self.game_state = MENU
         self.game_mode = None
-        self.stars = [Star() for _ in range(100)]
+        self.stars = [Star(WIN) for _ in range(100)]
         
         # Initialize buttons
-        self.ai_mode_button = Button(WIDTH // 2 - 200, HEIGHT // 2 - 50, 400, 50, "Play vs AI", PURPLE)
-        self.human_mode_button = Button(WIDTH // 2 - 200, HEIGHT // 2 + 50, 400, 50, "Play vs Human", BLUE)
-        self.restart_button = Button(WIDTH // 2 - 180, HEIGHT // 2 + 50, 160, 50, "Play Again", PURPLE)
-        self.quit_button = Button(WIDTH // 2 + 20, HEIGHT // 2 + 50, 160, 50, "Quit", RED)
+        self.ai_mode_button = Button(WIDTH // 2 - 200, HEIGHT // 2 - 50, 400, 50, "Play vs AI", PURPLE,self.WIN)
+        self.human_mode_button = Button(WIDTH // 2 - 200, HEIGHT // 2 + 50, 400, 50, "Play vs Human", BLUE,self.WIN)
+        self.restart_button = Button(WIDTH // 2 - 180, HEIGHT // 2 + 50, 160, 50, "Play Again", PURPLE,self.WIN)
+        self.quit_button = Button(WIDTH // 2 + 20, HEIGHT // 2 + 50, 160, 50, "Quit", RED,self.WIN)
 
     def draw_stars(self):
         for star in self.stars:
             star.update()
-            star.draw(self.WIN)
+            star.draw()
 
     def draw_menu(self):
         self.WIN.fill(BG_COLOR)
@@ -32,8 +32,8 @@ class Board:
         title_rect = title.get_rect(center=(WIDTH // 2, HEIGHT // 3))
         self.WIN.blit(title, title_rect)
         
-        self.ai_mode_button.draw(self.WIN)
-        self.human_mode_button.draw(self.WIN)
+        self.ai_mode_button.draw()
+        self.human_mode_button.draw()
         
         pygame.display.update()
 
@@ -114,13 +114,42 @@ class Board:
         self.current_player = "black"
         self.game_state = PLAYING
         self.draw_grid()
+    
+    def draw_winning_line(self,win_result):
+        start, end = win_result
+        start_pos = (BOARD_OFFSET_X + start[1] * CELL_SIZE + CELL_SIZE // 2, 
+                  BOARD_OFFSET_Y + start[0] * CELL_SIZE + CELL_SIZE // 2)
+        end_pos = (BOARD_OFFSET_X + end[1] * CELL_SIZE + CELL_SIZE // 2, 
+                  BOARD_OFFSET_Y + end[0] * CELL_SIZE + CELL_SIZE // 2)
+        pygame.draw.line(self.WIN, RED, start_pos, end_pos, 8)
+        pygame.display.update()
+
+
+
+    def display_winner_message(self,player):
+        surface = pygame.Surface((WIDTH, HEIGHT), pygame.SRCALPHA)
+        surface.fill((0, 0, 0, 180))
+        self.WIN.blit(surface, (0, 0))
+    
+        if self.game_mode == "ai":
+            message = f"{'You won!' if player == 'black' else 'AI won!'}"
+        else:
+            message = f"{'Black' if player == 'black' else 'White'} won!"
+    
+        text = FONT_LARGE.render(message, True, GOLD)
+        self.WIN.blit(text, (WIDTH//2 - text.get_width()//2, HEIGHT//2 - text.get_height()))
+    
+        self.restart_button.draw()
+        self.quit_button.draw()
+        pygame.display.update()
+
 
     def place_stone(self, row, col):
         if self.board[row][col] is None:
             self.board[row][col] = self.current_player
             self.draw_grid()
             
-            win_result = check_win(row, col, self.current_player)
+            win_result = check_win(row, col, self.current_player,self.board)
             if win_result:
                 self.draw_winning_line(win_result)
                 pygame.time.delay(500)
@@ -132,6 +161,6 @@ class Board:
                     self.game_state = AI_THINKING
                     self.draw_grid()
                     pygame.time.delay(500)
-                    row, col = get_ai_move()
+                    row, col = get_ai_move(self.board,self.current_player)
                     self.game_state = PLAYING
                     self.place_stone(row, col)

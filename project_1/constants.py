@@ -1,5 +1,6 @@
 # constants.py
 import pygame
+pygame.init()
 
 # Game settings
 WIDTH, HEIGHT = 800, 800

@@ -1,5 +1,4 @@
 from constants import *
-
 class GameState:
     def __init__(self, board):
         self.board = [row[:] for row in board]
@@ -21,3 +20,4 @@ class GameState:
                 if (0 <= r < ROWS and 0 <= c < COLS and self.board[r][c] is not None):
                     return True
         return False
+
