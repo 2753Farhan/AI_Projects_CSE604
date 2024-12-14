@@ -50,6 +50,8 @@ The AI uses a weighted scoring system for game state evaluation:
 - **Smart Move Generation**: Focuses on moves adjacent to stones.
 - **Memory-Efficient Pattern Detection**: Improved performance for large searches.
 
+### Screen Shots
+![image](https://github.com/user-attachments/assets/e2378ea6-1ce9-4337-8d00-ba8090b7727b)
 ---
 
 ## Critical Evaluation
