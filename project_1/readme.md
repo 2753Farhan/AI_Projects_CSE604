@@ -2,6 +2,7 @@
 
 ## Overview
 This repository presents **Cosmic Gomoku**, an enhanced Gomoku game using the Pygame framework. The game features a cosmic-themed UI with an animated background, and an AI opponent using the minimax algorithm with alpha-beta pruning.
+Check out the live game [here](https://cosmic-gomoku.vercel.app/).
 
 ---
 
@@ -51,8 +52,13 @@ The AI uses a weighted scoring system for game state evaluation:
 - **Memory-Efficient Pattern Detection**: Improved performance for large searches.
 
 ### Screen Shots
-![image](https://github.com/user-attachments/assets/e2378ea6-1ce9-4337-8d00-ba8090b7727b)
-![image](https://github.com/user-attachments/assets/da11a214-d5ff-4770-b4eb-951e8aff18d0)
+
+<img src="https://github.com/user-attachments/assets/e2378ea6-1ce9-4337-8d00-ba8090b7727b" width="400" />
+
+<img src="https://github.com/user-attachments/assets/da11a214-d5ff-4770-b4eb-951e8aff18d0" width="400" />
+
+<img src="https://github.com/user-attachments/assets/33ae5611-8dc0-4efe-9f38-8d99898610f8" width="400" />
+
 
 ---
 
