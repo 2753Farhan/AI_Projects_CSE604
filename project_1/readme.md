@@ -52,6 +52,8 @@ The AI uses a weighted scoring system for game state evaluation:
 
 ### Screen Shots
 ![image](https://github.com/user-attachments/assets/e2378ea6-1ce9-4337-8d00-ba8090b7727b)
+![image](https://github.com/user-attachments/assets/da11a214-d5ff-4770-b4eb-951e8aff18d0)
+
 ---
 
 ## Critical Evaluation
