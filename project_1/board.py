@@ -16,7 +16,7 @@ class Board:
         # Initialize buttons
         self.ai_mode_button = Button(WIDTH // 2 - 200, HEIGHT // 2 - 50, 400, 50, "Play vs AI", PURPLE,self.WIN)
         self.human_mode_button = Button(WIDTH // 2 - 200, HEIGHT // 2 + 50, 400, 50, "Play vs Human", BLUE,self.WIN)
-        self.restart_button = Button(WIDTH // 2 - 180, HEIGHT // 2 + 50, 160, 50, "Play Again", PURPLE,self.WIN)
+        self.restart_button = Button(WIDTH // 2 - 100, HEIGHT // 2 + 50, 200, 50, "Play Again", PURPLE,self.WIN)
         self.quit_button = Button(WIDTH // 2 + 20, HEIGHT // 2 + 50, 160, 50, "Quit", RED,self.WIN)
 
     def draw_stars(self):
@@ -140,7 +140,7 @@ class Board:
         self.WIN.blit(text, (WIDTH//2 - text.get_width()//2, HEIGHT//2 - text.get_height()))
     
         self.restart_button.draw()
-        self.quit_button.draw()
+        # self.quit_button.draw()
         pygame.display.update()
 
 
